@@ -189,6 +189,8 @@ No environment variables or `.env` configuration required. The backend detects t
 
 **1. Install dependencies**
 
+**Prerequisite:** Python 3.10 or higher
+
 ```bash
 cd scaffold
 python3 -m venv .venv
