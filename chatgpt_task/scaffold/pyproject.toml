@@ -1,0 +1,16 @@
+[project]
+name = "chatgpt-task-scaffold"
+version = "0.1.0"
+description = "Guided-track MCP task scheduler scaffold"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0.0",
+    "sqlalchemy==2.0.36",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
