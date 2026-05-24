@@ -89,7 +89,3 @@ Then chat:
 > -> Claude calls `task.create` -> returns job_id
 > "What's the status of that task?"
 > -> Claude calls `task.status`
-
-## Suggested Tech Stack
-
-Python + the official `mcp` SDK is recommended (already in `requirements.txt` for the Guided Track). Challenge Track may use any language with an MCP SDK.

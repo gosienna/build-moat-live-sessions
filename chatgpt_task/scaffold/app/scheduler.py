@@ -2,7 +2,7 @@ import queue
 import threading
 import time
 from datetime import datetime
-
+from .LLMcaller import LLMCaller
 from sqlalchemy.orm import Session
 
 from .database import SessionLocal
@@ -19,15 +19,7 @@ def get_time_bucket(scheduled_at: datetime) -> str:
     efficiently query only the relevant partition instead of scanning
     the entire jobs table.
     """
-    # TODO: Implement this function
-    #
-    # Design decision: Time-based partitioning for efficient job lookup
-    #
-    # Hints:
-    # 1. Format the datetime into a string that represents an hourly bucket
-    # 2. Use strftime with a format like "%Y%m%d%H" (e.g., "2025030114")
-    # 3. This bucket string becomes the partition key in the jobs table
-    return "0000000000"
+    return scheduled_at.strftime("%Y%m%d%H")
 
 
 def find_due_jobs(current_time: datetime, db: Session) -> list[Job]:
@@ -47,7 +39,8 @@ def find_due_jobs(current_time: datetime, db: Session) -> list[Job]:
     # 2. Query Job where time_bucket matches AND scheduled_at <= current_time
     # 3. Only include jobs with status == "pending"
     # 4. Return the list of matching Job objects
-    return []
+    time_bucket = get_time_bucket(current_time)
+    return db.query(Job).filter(Job.time_bucket == time_bucket, Job.scheduled_at <= current_time, Job.status == "pending").all()
 
 
 def watcher_loop(interval: int = 10):
@@ -71,6 +64,7 @@ def worker_loop():
     while True:
         job_id = job_queue.get()
         db = SessionLocal()
+        llm_caller = LLMCaller()
         try:
             job = db.query(Job).filter(Job.id == job_id).first()
             if job is None or job.status == "cancelled":
@@ -80,7 +74,7 @@ def worker_loop():
             db.commit()
 
             # Simulate execution — in production this would call LLM
-            job.result = f"Executed: {job.description}"
+            job.result = llm_caller.call(job.description)
             job.status = "completed"
             db.commit()
         except Exception as e:

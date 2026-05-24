@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "Guided-track MCP task scheduler scaffold"
 requires-python = ">=3.11"
 dependencies = [
+    "anthropic>=0.40.0",
+    "google-generativeai>=0.8.0",
     "mcp>=1.0.0",
+    "openai>=1.0.0",
+    "python-dotenv>=1.0.0",
     "sqlalchemy==2.0.36",
 ]
 

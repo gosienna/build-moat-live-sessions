@@ -10,7 +10,9 @@ Or test with the inspector:
 import asyncio
 import json
 from datetime import datetime
+from pathlib import Path
 
+from dotenv import load_dotenv
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
@@ -19,7 +21,16 @@ from sqlalchemy.orm import Session
 from .database import Base, SessionLocal, engine
 from .models import Job
 from .scheduler import get_time_bucket, start_scheduler
-
+from .LLMcaller import LLMCaller
+for _env_path in (
+    Path(__file__).resolve().parent.parent.parent / ".env",
+    Path(__file__).resolve().parent.parent / ".env",
+):
+    if _env_path.is_file():
+        load_dotenv(_env_path)
+        break
+else:
+    load_dotenv()
 
 # ===================================================================
 # Tool handlers — pure business logic, sync, take a DB Session
@@ -82,6 +93,18 @@ def handle_cancel_task(db: Session, *, job_id: int) -> dict:
     return {"job_id": job.id, "status": "cancelled"}
 
 
+def handle_execute_task(db: Session, *, job_id: int) -> dict:
+    """Execute a scheduled task."""
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if job is None:
+        return {"error": f"Job {job_id} not found"}
+    llm_caller = LLMCaller()
+    response = llm_caller.call(job.description)
+    job.result = response
+    job.status = "completed"
+    db.commit()
+    return {"job_id": job.id, "status": "completed", "result": response}
+
 # ===================================================================
 # Tool definitions — what Claude / MCP client sees
 # (pre-filled — boilerplate for MCP discovery, not the focus)
@@ -134,6 +157,17 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["job_id"],
         },
     ),
+    Tool(
+        name="task_execute",
+        description="Execute a scheduled task",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "job_id": {"type": "integer", "description": "The job ID to execute"},
+            },
+            "required": ["job_id"],
+        },
+    )
 ]
 
 
@@ -159,6 +193,7 @@ TOOL_REGISTRY: dict = {
     "task_list": handle_list_tasks,
     "task_status": handle_get_status,
     "task_cancel": handle_cancel_task,
+    "task_execute": handle_execute_task,
 }
 
 def route_tool_call(tool_name: str, arguments: dict, db: Session) -> dict:
